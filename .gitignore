@@ -1,0 +1,13 @@
+.DS_Store
+.venv/
+__pycache__/
+*.py[cod]
+
+# Smoke and newly generated runs are local working artifacts.
+results/journal_smoke/
+results/smoke/
+
+# Keep the committed, reviewed final evidence. Ignore any other run folders.
+results/*/
+!results/journal_final/
+!results/journal_final/**
