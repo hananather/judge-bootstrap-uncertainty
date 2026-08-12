@@ -97,6 +97,15 @@ class, or with \(J^*\le0\). The balanced designs used here make the missing-clas
 event effectively absent, so this experiment tests the denominator rule only.
 It uses 20,000 repeated studies per cell and 1,000 bootstrap draws per study.
 
+This distinction matters. With an observed 50/50 validation split, the pooled
+bootstrap probability of losing one class is \(2^{1-N}\), approximately
+\(1.6\times10^{-30}\) when \(N=100\). That continuation statement is therefore
+irrelevant in the textbook's displayed 50/50 setting. It can matter in an
+imbalanced pooled sample: with 2 human-Pass and 18 human-Fail cases, the exact
+probability is \(0.9^{20}+0.1^{20}=12.2\%\). If the two class counts were fixed
+by design, the correct response is to resample within each stratum, which makes
+the missing-class event impossible.
+
 ![Discarding and nonreporting when the evaluator is weak](results/component_ablation/discarding_and_boundary_rules.png)
 
 | Validation labels | True \(J\) | Weak draws discarded when an interval is attempted | Studies returning no ratio interval | Textbook coverage among reports | Textbook report-and-cover probability | Coverage with the prespecified weak-draw completion |
