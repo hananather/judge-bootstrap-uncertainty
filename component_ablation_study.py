@@ -384,7 +384,7 @@ def plot_results(rows: list[dict[str, object]], output: Path) -> None:
             axes[0, column].plot(
                 x, not_reported, color="#5B4B8A", marker="D",
                 linestyle="--", linewidth=1.4,
-                label="Studies that cannot report an interval",
+                label="Studies not reported because estimated J ≤ 0",
             )
             axes[0, column].set_title(f"{validation_total} validation labels")
             axes[0, column].set_ylabel("Frequency (%)")
@@ -392,13 +392,17 @@ def plot_results(rows: list[dict[str, object]], output: Path) -> None:
             axes[0, column].grid(alpha=0.16)
             axes[0, column].annotate(
                 f"{invalid[0]:.1f}% of draws\ndiscarded",
-                (x[0], invalid[0]), xytext=(38, -25), textcoords="offset points",
+                (x[0], invalid[0]),
+                xytext=((38, -25) if column == 0 else (62, 32)),
+                textcoords="offset points",
                 fontsize=7.0, color="#8C1622", va="top",
                 arrowprops={"arrowstyle": "-", "color": "#8C1622", "lw": 0.7},
             )
             axes[0, column].annotate(
-                f"{not_reported[0]:.1f}% of studies\nreturn no interval",
-                (x[0], not_reported[0]), xytext=(38, 13), textcoords="offset points",
+                f"{not_reported[0]:.1f}% of studies\nsuppressed by the rule",
+                (x[0], not_reported[0]),
+                xytext=((38, 13) if column == 0 else (62, 70)),
+                textcoords="offset points",
                 fontsize=7.0, color="#5B4B8A", va="bottom",
                 arrowprops={"arrowstyle": "-", "color": "#5B4B8A", "lw": 0.7},
             )
@@ -415,17 +419,17 @@ def plot_results(rows: list[dict[str, object]], output: Path) -> None:
                 (
                     textbook, "conditional_coverage", "coverage_wilson_low",
                     "coverage_wilson_high", "#D55E00", "o",
-                    "Textbook: conditional coverage",
+                    "Chapter-style interval: coverage among reports",
                 ),
                 (
                     boundary, "conditional_coverage", "coverage_wilson_low",
                     "coverage_wilson_high", "#009E73", "^",
-                    "Weak-draw completion: conditional coverage",
+                    "Completed weak draws: coverage among reports",
                 ),
                 (
                     textbook, "operational_coverage", "operational_coverage_wilson_low",
                     "operational_coverage_wilson_high", "#5B4B8A", "D",
-                    "Textbook: report-and-cover probability",
+                    "J > 0 rule: probability of reporting and covering",
                 ),
             )
             for points, value_key, low_key, high_key, color, marker, label in coverage_series:
@@ -440,8 +444,8 @@ def plot_results(rows: list[dict[str, object]], output: Path) -> None:
                     capthick=1.4, markersize=4.8, label=label,
                 )
             axes[1, column].axhline(95.0, color="#555555", linestyle="--", linewidth=1.0)
-            axes[1, column].set_xlabel("Judge informedness J (%)")
-            axes[1, column].set_ylabel("Empirical coverage (%)")
+            axes[1, column].set_xlabel("Pass/Fail separation, J (%)")
+            axes[1, column].set_ylabel("Probability (%)")
             axes[1, column].set_ylim(75.0, 100.5)
             axes[1, column].grid(alpha=0.16)
 
@@ -465,7 +469,7 @@ def plot_results(rows: list[dict[str, object]], output: Path) -> None:
         )
         axes[0, 0].legend(frameon=False, loc="upper right", fontsize=6.5)
         figure.suptitle(
-            "Weak judges expose denominator instability, not just a cleanup problem",
+            "When the evaluator is weak, reporting rules matter",
             fontsize=12.0, y=0.98,
         )
         figure.text(
@@ -475,7 +479,7 @@ def plot_results(rows: list[dict[str, object]], output: Path) -> None:
         )
         figure.text(
             0.5, 0.075,
-            "Coverage bars are 95% Wilson intervals. The weak-draw completion is one prespecified interpretation of the review suggestion, not a validated weak-J interval.",
+            "Vertical bars show 95% uncertainty for each simulated probability. All lower-panel series report only when estimated J > 0; completing weak draws is a diagnostic.",
             ha="center", fontsize=7.2,
         )
         figure.subplots_adjust(

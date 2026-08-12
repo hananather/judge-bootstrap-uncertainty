@@ -817,9 +817,9 @@ def reader_figure_target_resampling(
     rows = [row for row in summary if row["study"] == "A"]
     regime = "high success, N=200"
     scenarios = (
-        (0.10, "Production uncertainty is small\n(10% of validation uncertainty)"),
-        (1.00, "Production and validation\nuncertainty are equal"),
-        (2.00, "Production uncertainty is twice\nvalidation uncertainty"),
+        (0.10, "Production cases contribute 10% as much\nvariance as validation cases"),
+        (1.00, "Production and validation cases\ncontribute equal variance"),
+        (2.00, "Production cases contribute twice\nas much variance as validation cases"),
     )
     y_positions = np.arange(len(scenarios))[::-1]
     methods = (
@@ -949,7 +949,7 @@ def reader_figure_target_resampling(
         figure.text(
             0.5, 0.018,
             "Controlled example: true success rate 80%; 200 fixed, outcome-balanced validation labels. "
-            "Coverage error bars are 95% Wilson intervals across 5,000 repeated studies.",
+            "Vertical bars show 95% simulation uncertainty across 5,000 repeated studies.",
             ha="center", fontsize=7.0,
         )
         figure.subplots_adjust(

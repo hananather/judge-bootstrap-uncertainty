@@ -1,201 +1,315 @@
-# Bootstrap uncertainty for automated evaluators
+# When can we trust uncertainty from an automated evaluator?
 
-This repository reconstructs the binary evaluator bootstrap proposed in
-Shankar and Husain's *Evals for AI Engineers*, then adds one statistical
-component at a time. It asks three practical questions:
+Automated evaluators can score far more cases than people can review. They also
+make mistakes. A common approach is to use a smaller human-reviewed sample to
+correct the automated pass rate. A bootstrap then repeatedly resamples the
+observed data to show how much that corrected rate could change.
 
-1. What happens when a bootstrap ignores variation in randomly sampled
-   production cases?
-2. What happens when weak-denominator bootstrap draws are discarded?
-3. What happens when the evaluator's error rates change after validation?
+If that interval is too narrow or centred on the wrong value, a team can become
+confident in an evaluator or system that has not earned that confidence.
 
-Start with this README for the intuition and main findings. See
-[`KEY_RESULTS.md`](KEY_RESULTS.md) for a compact numerical summary,
-[`BOOTSTRAP_COMPONENT_STUDY.md`](BOOTSTRAP_COMPONENT_STUDY.md) for the
-component-by-component argument,
-[`METHOD.md`](METHOD.md) for the statistical setup, and
-[`TECHNICAL_RESULTS.md`](TECHNICAL_RESULTS.md) for the full evidence record.
+This repository asks a narrow question:
 
-## The practical question
+> Does the bootstrap include every source of variation that matters for the
+> question we want to answer?
 
-An automated evaluator can score many production cases quickly, but it makes
-mistakes. A smaller set of human-labelled cases tells us how often it makes
-those mistakes. We want to use both sources to answer two questions:
+## Summary
 
-1. What proportion of production cases would pass an authoritative human
-   review?
-2. How uncertain is that corrected success rate?
+We learned three things.
 
-The setup has three pieces:
+1. **A bootstrap can miss substantial uncertainty if it holds a random
+   production sample fixed.** In one experiment, the original interval
+   contained the true rate only 82.1% of the time. Resampling the production
+   cases raised this to 94.4%, close to the intended 95%.
+2. **A weak evaluator makes the correction unstable, and the reporting rule
+   becomes part of the result.** In the hardest tested setting, 12.0% of the
+   original method's bootstrap draws were discarded. A separate rule that
+   reported an interval only when estimated $J$ was above zero
+   suppressed 13.4% of repeated studies.
+3. **No bootstrap can repair outdated information about evaluator accuracy.**
+   When the evaluator became five percentage points worse at recognizing true
+   passes, the corrected rate was 5.2 points too low and interval coverage fell
+   to 70.5%.
 
-- **Production cases:** the automated evaluator labels a comparatively large
-  sample as Pass or Fail.
-- **Validation cases:** humans provide authoritative labels for a smaller
-  sample, allowing us to measure the evaluator's error rates.
-- **Corrected success rate:** the automated pass rate is adjusted using the
-  measured error rates.
+**A bootstrap only measures the variation that its resampling procedure
+repeats.** It cannot account for a random input that is held fixed, and it
+cannot correct a wrong assumption about evaluator accuracy.
 
-## Six ideas needed to read the results
+## What were we trying to show?
 
-**Judge pass rate.** The percentage of production cases that the automated
-evaluator labels Pass. This is not necessarily the human-defined success rate.
+The original procedure in Shankar and Husain's
+[Chapter 5 of *Evals for AI Engineers*](https://learning.oreilly.com/library/view/evals-for-ai/9798341660717/)
+aims to estimate performance on new, unlabelled production cases. Its bootstrap
+resamples the human-reviewed validation cases but holds the automated pass rate
+in the production sample fixed.
 
-**Sensitivity.** Among cases that truly pass, the percentage the evaluator
-also labels Pass. It measures how well the evaluator recognizes true passes.
+The narrow question mathematically supported by that resampling is:
 
-**Specificity.** Among cases that truly fail, the percentage the evaluator
-also labels Fail. It measures how well the evaluator recognizes true failures.
+> Given the automated labels already observed for this batch, how much does our
+> answer vary because we estimated the evaluator's error rates from a small
+> human-reviewed sample?
 
-**Evaluator informedness.** The correction denominator is
-$J=\text{sensitivity}+\text{specificity}-1$. A value near zero means that the
-evaluator is close to chance and the correction becomes unstable.
+That calculation is sensible if the automated labels are deliberately treated
+as fixed. It is not, by itself, an interval for the unknown human pass rate in
+the fixed batch. Nor does it answer the broader population question that
+motivates the chapter:
 
-**Corrected success rate.** Let $\widehat q$ be the judge pass rate,
-$\widehat a$ sensitivity, and $\widehat b$ specificity. The correction is
+> If we drew another set of production cases from the same ongoing process, how
+> much would the corrected pass rate vary?
+
+Our first goal was to measure the difference between these two questions. The
+later experiments asked what happens when the evaluator is close to random
+guessing, and when its measured accuracy no longer applies in production.
+
+Jointly resampling labelled and unlabelled data is not new;
+[PPBoot](https://arxiv.org/abs/2405.18379) already does this for a different,
+prediction-powered estimator. The contribution here is narrower: we quantify
+what the chapter-style error-rate correction misses, and show why the question
+being asked and the way human labels were collected determine the right
+procedure.
+
+## The setup, without the statistical shorthand
+
+The common application combines two sources of information:
+
+- A large production sample receives automated Pass or Fail labels.
+- A smaller validation sample receives both automated labels and human labels.
+
+The human labels show how often the evaluator misses a true pass or a true
+failure. We use those error rates to correct the automated pass rate with the
+[Rogan–Gladen correction](https://pubmed.ncbi.nlm.nih.gov/623091/).
+
+```mermaid
+flowchart LR
+    A["Production cases"] --> B["Automated Pass or Fail labels"]
+    C["Cases with human and automated labels"] --> D["How often the evaluator is wrong"]
+    B --> E["Corrected pass rate"]
+    D --> E
+    E --> F["Uncertainty interval"]
+```
+
+The diagram hides one decision that changes the meaning of the final interval:
+which parts of this process would change if we repeated the study?
+
+| Question being answered | What the bootstrap should repeat |
+|---|---|
+| Conditional on one fixed set of automated labels, how much uncertainty comes from the estimated error rates? | The human-reviewed validation sample |
+| The batch is a sample from an ongoing population | Both the production sample and the validation sample |
+
+The first row asks only how uncertain error-rate estimates change the answer
+after the automated labels are fixed. It should not be read as a general
+confidence interval for the fixed batch's unknown human pass rate.
+
+## Result 1: a random production sample must be resampled
+
+If the production cases come from an ongoing stream, their automated pass rate
+will change from sample to sample. Holding that rate fixed removes a real source
+of uncertainty.
+
+![The original interval becomes too confident when production-sample variation matters](results/journal_final/reader_target_resampling.png)
+
+The figure uses an 80% true human-defined success rate and 200 human-reviewed
+validation cases. The horizontal axis is the ratio of the production-sample
+variance to the validation-sample variance.
+
+| Production variance relative to validation variance | Production rate held fixed | Production rate resampled |
+|---|---:|---:|
+| 0.1 times as large | 93.2% | 94.4% |
+| Equal | 82.1% | 94.4% |
+| Twice as large | 72.8% | 93.9% |
+
+An interval designed for 95% coverage should contain the true value in about 95
+out of 100 repeated studies. The error was smaller when the omitted variance
+was small, though 93.2% was still below the intended 95%. The interval became
+much too confident as the omitted variance grew.
+
+Before choosing the bootstrap, decide whether the target is a fixed batch or an
+ongoing population. Neither choice is always right. They answer different
+questions.
+
+## Result 2: weak evaluators make the correction and its reporting rule fragile
+
+The correction divides by a measure of the evaluator's net ability to
+distinguish Pass from Fail at the chosen threshold. We denote it by $J$:
 
 $$
-\widehat\theta
-=
-\frac{\widehat q+\widehat b-1}
-     {\widehat a+\widehat b-1}.
+J = \text{sensitivity} + \text{specificity} - 1.
 $$
 
-For example, if sensitivity and specificity are both 87.5% and the evaluator
-passes 72.5% of production cases, the corrected human-defined success rate is
-80%.
+Sensitivity is the fraction of true passes recognized as Pass. Specificity is
+the fraction of true failures recognized as Fail. If $J$ is close to zero, the
+evaluator has little net ability to distinguish the two groups and the
+correction becomes unstable. A constant classifier can also have $J=0$, so
+this condition is broader than literal random guessing.
 
-**Coverage.** Imagine repeating the entire study many times. A valid 95%
-confidence interval should contain the true success rate in about 95 out of
-100 repetitions. If it succeeds only 82 times, it is too confident: its
-intervals are too narrow or incorrectly centred.
+![A weak evaluator creates discarded bootstrap draws and makes the reporting rule consequential](results/component_ablation/discarding_and_boundary_rules.png)
 
-## Result 1: production-sample uncertainty must be included
+Two different events appear in this experiment:
 
-The production cases are a random sample from an ongoing population. Their
-observed judge pass rate therefore changes from sample to sample. A bootstrap
-that holds this rate fixed pretends that one source of uncertainty does not
-exist.
+- Some simulated bootstrap draws have $J$ equal to or below zero. The
+  original code discards them.
+- The stress study also imposed a reporting rule: do not report the usual
+  corrected-rate interval when the observed $J$ is zero or negative. The
+  correction is undefined at zero. It still exists below zero, but the rule
+  excludes that case because the evaluator no longer has positive separation
+  between Pass and Fail.
 
-![Including production-sample uncertainty restores interval coverage](results/journal_final/reader_target_resampling.png)
+With 40 validation labels and a true $J$ of 0.20, the original method discarded
+12.0% of its bootstrap draws among studies where it attempted an interval.
+Under the added positive-$J$ reporting rule, 13.4% of repeated studies
+were suppressed. The interval contained the truth 93.7% of the time *when the
+rule allowed reporting*, but the chance of both reporting an interval and
+covering the truth was only 81.1%.
 
-The figure uses one controlled setting: an 80% true success rate and 200
-human-labelled validation cases.
+The literal chapter implementation does not contain this outer reporting rule.
+The 13.4% result therefore measures a transparent policy choice, not a failure
+caused by discarding inner bootstrap draws.
 
-- When production-sample uncertainty was small, both procedures worked about
-  equally well.
-- When production and validation contributed equal uncertainty, holding the
-  production rate fixed gave only **82.1% coverage**. Adding production
-  resampling alone gave **94.4% coverage**.
-- When production uncertainty was twice as large as validation uncertainty,
-  the incomplete procedure fell to **72.8% coverage**, while the
-  production-resampled bootstrap remained near **93.9%**.
+The chapter itself warns that the correction is unreliable when $J$ is near
+zero, recommends keeping the evaluator fixed during measurement, and treats
+drift as a practical risk. These experiments put numbers on those warnings;
+they do not claim to discover them.
 
-The reason is simple: the incomplete procedure acts as if the observed
-production sample were the whole population. That assumption makes its
-intervals look more precise than they are.
+We also tested one explicit rule for keeping the problematic bootstrap draws.
+It retained corrected values when $J$ was negative and assigned a value only
+when $J$ was exactly zero. It produced wider intervals, but the separate outer
+reporting rule still suppressed studies whose observed $J$ was not positive.
+This is a diagnostic comparison, not a recommended solution.
 
-**Practical implication.** If the goal is inference about an ongoing or future
-production population, resample the production cases as well as the validation
-data. If the target is one fixed, fully scored batch, holding that batch fixed
-may instead be appropriate. The estimand determines the resampling design.
+Report how often an interval could not be computed and how often bootstrap
+draws were removed. Coverage among successful runs can make a fragile method
+look healthier than it is.
 
-## Result 2: weak evaluators create nonreporting, not just wide intervals
+## Result 3: resampling cannot repair outdated evaluator accuracy
 
-The original procedure removes bootstrap draws whose estimated denominator is
-nonpositive. A separate 20,000-replication stress study makes those events
-visible.
+The correction assumes that the evaluator makes the same kinds of errors in
+validation and production. The third experiment deliberately breaks that
+assumption.
 
-![Weak evaluators expose discarded draws and nonreporting](results/component_ablation/discarding_and_boundary_rules.png)
+![Changes in evaluator accuracy create bias that the bootstrap cannot remove](results/journal_final/reader_calibration_drift.png)
 
-Two different events matter. With 40 validation labels and evaluator
-informedness $J=0.20$, 12.0% of *inner bootstrap draws* were discarded among
-studies where an interval was attempted. Separately, 13.4% of *repeated outer
-studies* had a nonpositive observed denominator and returned no ratio interval.
-The interval covered 93.7% of the time conditional on reporting, but the
-probability of both reporting and covering was only 81.1%.
+The true human-defined success rate is again 80%.
 
-One prespecified rule retained negative-denominator draws and assigned an
-explicit value when the denominator was exactly zero. It widened the interval
-and raised conditional coverage, but it did not solve the observed
-nonpositive-denominator problem. The lesson is to disclose weak-draw and
-nonreporting rates and avoid treating a boundary convention as a validated
-weak-identification method. The exact rule is documented in
-[`BOOTSTRAP_COMPONENT_STUDY.md`](BOOTSTRAP_COMPONENT_STUDY.md).
+| Change after validation | Error in the corrected rate | How often the 95% interval contained the truth |
+|---|---:|---:|
+| No change | About 0.0 points | 93.8% |
+| Recognizes five fewer true passes per 100 | 5.2 points too low | 70.5% |
+| Recognizes five fewer true failures per 100 | 1.5 points too high | 94.0% |
+| Both abilities decline by five points | 3.9 points too low | 80.0% |
 
-## Result 3: resampling cannot repair stale evaluator accuracy
+The direction matters. In this example, 80% of cases truly pass, so a decline
+in recognizing passes affects more cases than the same decline in recognizing
+failures.
 
-The correction also assumes that sensitivity and specificity measured during
-validation still apply in production. The second experiment deliberately
-breaks that assumption.
+More bootstrap draws cannot make old validation results describe a changed
+evaluator or a changed population. That requires fresh human labels or a study
+that connects the old and new settings.
 
-![Bias and coverage after evaluator accuracy changes](results/journal_final/reader_calibration_drift.png)
+## A smaller result: clipping was not the problem here
 
-The setting has an 80% true success rate. The figure asks what happens when the
-evaluator's ability to recognize true passes, true failures, or both declines
-by five percentage points after validation.
+The original code forces every corrected bootstrap value into the range from 0
+to 1. We compared that with taking the percentiles first and constraining only
+the two displayed endpoints.
 
-- With no change after validation, the corrected estimate was essentially
-  unbiased and the interval contained the truth **93.8 times out of 100**.
-- When the evaluator recognized five fewer true passes per 100, the corrected
-  success rate was **5.2 points too low** and coverage fell to **70.5%**.
-- When it recognized five fewer true failures per 100, the corrected rate was
-  **1.5 points too high**. Coverage remained near 94%, but the estimate was
-  still systematically shifted.
-- When both recognition rates declined, the corrected rate was **3.9 points
-  too low** and coverage fell to **80.0%**.
+The two choices gave identical coverage in all eight tested settings. Their
+average interval widths differed by less than 0.002 percentage points. That is
+an empirical result for these settings, not a general identity: the software's
+interpolated percentiles can differ depending on whether clipping happens
+before or after the percentile is calculated.
 
-Sensitivity drift mattered more in this example because 80% of cases truly
-passed. Most cases therefore relied on the evaluator's ability to recognize
-true passes. In a low-success population, specificity drift could matter more.
+This result does not prove that ordinary percentile intervals work well near a
+boundary. It only shows that the location of the clipping step was not driving
+the results in this experiment.
 
-**Practical implication.** More bootstrap draws do not solve calibration
-drift. If evaluator behaviour may have changed, collect fresh human labels from
-the current population or use a defensible bridge study. A bootstrap measures
-the sampling variation represented in its design; it does not make stale error
-rates valid again.
+## Did the study succeed?
 
-## What the technical figures add
+Yes, for its three narrow claims:
 
-The three figures above are the report-facing explanation. The denser technical
-figures remain useful as supporting evidence:
+- It isolated the uncertainty omitted when a random production sample is held
+  fixed.
+- It quantified discarded draws and showed how an explicit reporting rule can
+  make coverage calculated only among reported intervals hide nonreporting.
+- It measured the bias caused by changes in evaluator accuracy after
+  validation.
 
-- [`study_a_journal.png`](results/journal_final/study_a_journal.png) shows the
-  general variance-ratio law, standard-error mechanism, target-resampling
-  ablation, and a separate label-allocation calculation.
-- [`study_b_journal.png`](results/journal_final/study_b_journal.png) shows the
-  complete bias and coverage surfaces across all 81 drift combinations.
+No, it did not settle the broader question of which estimator should be used in
+every automated-evaluation setting. In particular, it did not compare this
+error-rate correction with a prediction-powered difference estimator under
+matched data-collection designs. That is the most useful next experiment.
 
-The label-allocation calculation answers a different question from the
-bootstrap experiment. It describes how to allocate a fixed validation budget
-to improve estimator precision under a specified model. It is not a universal
-recommendation for diagnosing evaluator failures.
+## Which review questions are settled?
 
-## What these simulations do not establish
+| Question raised in the review | Current answer |
+|---|---|
+| Does holding the production rate fixed omit uncertainty? | **Yes, for an ongoing-population target. Tested directly.** Holding it fixed answers only how estimated error rates change an answer after automated labels are fixed. It is not general inference for a fixed batch's unknown human pass rate. |
+| What happens when draws with $J\leq0$ are discarded? | **Partly settled.** We measured discarded draws. The nonreporting result comes from a separate explicit reporting rule, and the study did not isolate a causal effect of discarding on coverage. |
+| Does clipping every draw change the percentile interval? | **Not materially in the eight tested settings.** Boundary inference remains a separate question. |
+| How large is finite-sample ratio bias when the evaluator is weak? | **Still open in the weak-evaluator study.** The study reports coverage and reporting failures, but not the requested bias analysis. |
+| What if evaluator accuracy changes after validation? | **Tested in a controlled sensitivity analysis.** The resulting bias can be large and cannot be repaired by resampling. |
+| Does the way human labels were collected matter? | **Yes.** We matched the bootstrap to fixed Pass and Fail validation counts, but have not yet compared different label-collection designs. |
+| What about clustered cases, repeated judge calls, or disagreement between human reviewers? | **Not studied.** |
+| What if the evaluator provides a useful score rather than only Pass or Fail? | **Not studied.** |
 
-These are controlled binary experiments. They do not establish that a specific
-LLM evaluator is accurate or stable. They do not cover multiple classes,
-clustered traces, reviewer disagreement, repeated judge calls, prompt changes,
-or evaluator-version changes. They isolate three statistical lessons:
+## Assumptions used in these simulations
 
-1. repeat every random component relevant to the target of inference; and
-2. do not confuse resampling uncertainty with protection against systematic
-   evaluator error or drift; and
-3. report nonreporting and weak-draw rates rather than conditioning the result
-   silently on successful ratio estimation.
+These are choices made for the experiments, not claims about every real system.
 
-## Technical record and reproduction
+- The outcome and evaluator label are both Pass or Fail.
+- The validation data contain fixed numbers of human-defined passes and
+  failures.
+- The validation and production samples are separate and independent.
+- Cases are independent rather than grouped by user, conversation, or prompt
+  template.
+- Each case receives one evaluator label, and the human label is treated as the
+  reference answer.
+- The target is one success rate, not a comparison between systems or time
+  periods.
 
-- [`METHOD.md`](METHOD.md) gives the model, estimand, and interval definitions.
-- [`TECHNICAL_RESULTS.md`](TECHNICAL_RESULTS.md) records the full design, numerical
-  findings, verification checks, and technical captions.
-- [`journal_study.py`](journal_study.py) contains the expanded simulations and
-  plotting code.
-- [`component_ablation_study.py`](component_ablation_study.py) contains the
-  20,000-replication weak-denominator study.
-- [`journal_summary.csv`](results/journal_final/journal_summary.csv) contains
-  the full-precision summaries used in every displayed figure.
+A real application must answer these design questions before choosing an
+estimator or a bootstrap. If the answers differ, the analysis must change too.
 
-Install the two runtime dependencies in a virtual environment:
+## What should be studied next?
+
+The next experiment should compare two complete data-collection strategies at
+the same total human-review cost, including any screening needed to obtain fixed
+numbers of Pass and Fail cases:
+
+1. fixed numbers of human Pass and Fail cases with the error-rate correction
+   studied here; and
+2. a representative human sample with
+   [PPBoot](https://arxiv.org/abs/2405.18379), which combines cheap automated
+   predictions with human labels from the same target population.
+
+If the human sample is collected with unequal probabilities, a separate
+[weighted or stratified prediction-powered method](https://proceedings.neurips.cc/paper_files/paper/2024/hash/c9fcd02e6445c7dfbad6986abee53d0d-Abstract-Conference.html)
+is needed; basic PPBoot does not solve that design problem by itself.
+
+That comparison would answer the question the current work leaves open: which
+combination of label-collection design and estimator achieves near-95% coverage
+with the narrowest interval for a stated total collection cost?
+
+Later studies can address clustered cases, repeated evaluator calls, human
+disagreement, continuous evaluator scores, and comparisons between systems.
+Those extensions matter, but they should not be mixed into the first comparison
+until the basic design question is settled.
+
+## Where the details live
+
+- [`KEY_RESULTS.md`](KEY_RESULTS.md) gives the main numerical results in a short
+  format.
+- [`BOOTSTRAP_COMPONENT_STUDY.md`](BOOTSTRAP_COMPONENT_STUDY.md) explains the
+  component-by-component comparison.
+- [`METHOD.md`](METHOD.md) defines the estimator and simulation designs.
+- [`TECHNICAL_RESULTS.md`](TECHNICAL_RESULTS.md) records the full grids,
+  formulas, checks, and technical figure captions.
+- [`journal_study.py`](journal_study.py) runs the production-sampling and
+  calibration-change experiments.
+- [`component_ablation_study.py`](component_ablation_study.py) runs the
+  weak-evaluator and clipping experiments.
+
+## Reproduce the studies
+
+Create a virtual environment and install NumPy and Matplotlib:
 
 ```bash
 python3 -m venv .venv
@@ -203,19 +317,17 @@ source .venv/bin/activate
 python3 -m pip install -r requirements.txt
 ```
 
-The scripts are deliberately small and have no command-line interface. Running
-`journal_study.py` directly invokes only the smoke study. The report-scale study
-is explicit:
+Run the main report-scale studies:
 
 ```bash
 python3 -c "import journal_study as js; print(js.run_final())"
 ```
 
-The component stress study is run separately:
+Run the weak-evaluator study separately:
 
 ```bash
 python3 component_ablation_study.py
 ```
 
-The current reader figures were regenerated from the existing final summary;
-the report-scale simulations were not rerun during the explanation redesign.
+The scripts are deliberately small and have no command-line interface. The
+saved CSV files contain the full-precision values behind the figures.
