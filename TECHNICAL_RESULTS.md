@@ -87,6 +87,32 @@ an equally sized specificity loss produces positive bias.  A complete bootstrap
 still describes the stipulated sampling mechanism; it cannot make an outdated
 calibration relationship true.
 
+## Study C: component and weak-denominator stress test
+
+Study C used 20,000 repeated studies per cell and 1,000 bootstrap draws. It
+crossed $N\in\{40,100\}$ fixed, balanced validation labels with
+$J\in\{0.20,0.30,0.40,0.75\}$ at $\theta=0.8$ and $m=2000$.
+
+At $N=40,J=.20$, 12.0% of inner draws had a nonpositive denominator among
+studies where the interval was attempted. A further 13.4% of outer studies had
+an observed nonpositive denominator and returned no ratio interval. Textbook
+coverage was 93.7% conditional on reporting, but the probability of both
+reporting and covering was 81.1%.
+
+The prespecified weak-draw completion raised conditional coverage to 96.5% and
+widened the mean interval from 79.6 to 90.7 percentage points. At
+$N=100,J=.20$, it raised conditional coverage from 94.8% to 97.2% and widened
+the mean interval from 68.4 to 81.3 points. These are conservative movements in
+the displayed cells, not validation of a universal boundary rule. Matching the
+fixed validation strata had a small numerical effect but remains the
+design-correct resampling scheme.
+
+Constraining every draw and constraining only the final percentile endpoints
+gave the same coverage in every cell and interval-width differences below
+0.002 percentage points. This is consistent with the near-commutation of
+percentile quantiles and monotone projection. Missing-class behavior was not
+exercised by the balanced design.
+
 ## Outputs and interpretation
 
 `journal_summary.csv` reports full-precision summaries for every cell and
@@ -145,6 +171,12 @@ summary rows and no weak-denominator or discarded-draw events. A separate
 six-cell check with 5,000 bootstrap draws changed coverage by at most 0.32
 percentage points and mean interval width by less than 0.001.
 
+Study C completed on 2026-08-12 with 20,000 outer replications in each of eight
+cells and 1,000 bootstrap draws per interval. Its output contains all 40
+expected cell-method summaries. Weak-draw rates in the displayed figure are
+conditional on an observed positive denominator; nonreporting is shown
+separately.
+
 ### Reusable caption: Study A
 
 **Figure.** What changes when a bootstrap holds a random target judge rate
@@ -178,5 +210,6 @@ These are controlled binary calculations.  They do not establish transport for
 a specific LLM judge, cover multi-class labels, account for clusters or
 reviewer disagreement, or compare outcome-balanced calibration with a current
 probability-labelled sample.  Weak denominators are surfaced rather than
-silently discarded; profile likelihood remains the appropriate next comparison
-for boundary cases.
+reported only through coverage conditional on successful runs; the component
+study also reports discarded-draw and nonreporting rates. Profile likelihood
+remains the appropriate next comparison for boundary cases.

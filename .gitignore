@@ -11,3 +11,5 @@ results/smoke/
 results/*/
 !results/journal_final/
 !results/journal_final/**
+!results/component_ablation/
+!results/component_ablation/**

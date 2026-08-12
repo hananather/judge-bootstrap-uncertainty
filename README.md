@@ -1,14 +1,18 @@
 # Bootstrap uncertainty for automated evaluators
 
-This repository contains a focused simulation study of uncertainty estimation
-for a binary automated evaluator. It asks two practical questions:
+This repository reconstructs the binary evaluator bootstrap proposed in
+Shankar and Husain's *Evals for AI Engineers*, then adds one statistical
+component at a time. It asks three practical questions:
 
 1. What happens when a bootstrap ignores variation in randomly sampled
    production cases?
-2. What happens when the evaluator's error rates change after validation?
+2. What happens when weak-denominator bootstrap draws are discarded?
+3. What happens when the evaluator's error rates change after validation?
 
 Start with this README for the intuition and main findings. See
 [`KEY_RESULTS.md`](KEY_RESULTS.md) for a compact numerical summary,
+[`BOOTSTRAP_COMPONENT_STUDY.md`](BOOTSTRAP_COMPONENT_STUDY.md) for the
+component-by-component argument,
 [`METHOD.md`](METHOD.md) for the statistical setup, and
 [`TECHNICAL_RESULTS.md`](TECHNICAL_RESULTS.md) for the full evidence record.
 
@@ -31,7 +35,7 @@ The setup has three pieces:
 - **Corrected success rate:** the automated pass rate is adjusted using the
   measured error rates.
 
-## Five ideas needed to read the results
+## Six ideas needed to read the results
 
 **Judge pass rate.** The percentage of production cases that the automated
 evaluator labels Pass. This is not necessarily the human-defined success rate.
@@ -41,6 +45,10 @@ also labels Pass. It measures how well the evaluator recognizes true passes.
 
 **Specificity.** Among cases that truly fail, the percentage the evaluator
 also labels Fail. It measures how well the evaluator recognizes true failures.
+
+**Evaluator informedness.** The correction denominator is
+\(J=\text{sensitivity}+\text{specificity}-1\). A value near zero means that the
+evaluator is close to chance and the correction becomes unstable.
 
 **Corrected success rate.** Let \(\widehat q\) be the judge pass rate,
 \(\widehat a\) sensitivity, and \(\widehat b\) specificity. The correction is
@@ -76,11 +84,11 @@ human-labelled validation cases.
 - When production-sample uncertainty was small, both procedures worked about
   equally well.
 - When production and validation contributed equal uncertainty, holding the
-  production rate fixed gave only **82.1% coverage**. Resampling the production
-  and validation data gave **94.2% coverage**.
+  production rate fixed gave only **82.1% coverage**. Adding production
+  resampling alone gave **94.4% coverage**.
 - When production uncertainty was twice as large as validation uncertainty,
   the incomplete procedure fell to **72.8% coverage**, while the
-  design-matched bootstrap remained near **94.0%**.
+  production-resampled bootstrap remained near **93.9%**.
 
 The reason is simple: the incomplete procedure acts as if the observed
 production sample were the whole population. That assumption makes its
@@ -91,7 +99,30 @@ production population, resample the production cases as well as the validation
 data. If the target is one fixed, fully scored batch, holding that batch fixed
 may instead be appropriate. The estimand determines the resampling design.
 
-## Result 2: resampling cannot repair stale evaluator accuracy
+## Result 2: weak evaluators create nonreporting, not just wide intervals
+
+The original procedure removes bootstrap draws whose estimated denominator is
+nonpositive. A separate 20,000-replication stress study makes those events
+visible.
+
+![Weak evaluators expose discarded draws and nonreporting](results/component_ablation/discarding_and_boundary_rules.png)
+
+Two different events matter. With 40 validation labels and evaluator
+informedness \(J=0.20\), 12.0% of *inner bootstrap draws* were discarded among
+studies where an interval was attempted. Separately, 13.4% of *repeated outer
+studies* had a nonpositive observed denominator and returned no ratio interval.
+The interval covered 93.7% of the time conditional on reporting, but the
+probability of both reporting and covering was only 81.1%.
+
+One prespecified rule retained negative-denominator draws and assigned an
+explicit value when the denominator was exactly zero. It widened the interval
+and raised conditional coverage, but it did not solve the observed
+nonpositive-denominator problem. The lesson is to disclose weak-draw and
+nonreporting rates and avoid treating a boundary convention as a validated
+weak-identification method. The exact rule is documented in
+[`BOOTSTRAP_COMPONENT_STUDY.md`](BOOTSTRAP_COMPONENT_STUDY.md).
+
+## Result 3: resampling cannot repair stale evaluator accuracy
 
 The correction also assumes that sensitivity and specificity measured during
 validation still apply in production. The second experiment deliberately
@@ -125,7 +156,7 @@ rates valid again.
 
 ## What the technical figures add
 
-The two figures above are the report-facing explanation. The denser technical
+The three figures above are the report-facing explanation. The denser technical
 figures remain useful as supporting evidence:
 
 - [`study_a_journal.png`](results/journal_final/study_a_journal.png) shows the
@@ -144,11 +175,13 @@ recommendation for diagnosing evaluator failures.
 These are controlled binary experiments. They do not establish that a specific
 LLM evaluator is accurate or stable. They do not cover multiple classes,
 clustered traces, reviewer disagreement, repeated judge calls, prompt changes,
-or evaluator-version changes. They isolate two statistical lessons:
+or evaluator-version changes. They isolate three statistical lessons:
 
 1. repeat every random component relevant to the target of inference; and
 2. do not confuse resampling uncertainty with protection against systematic
-   evaluator error or drift.
+   evaluator error or drift; and
+3. report nonreporting and weak-draw rates rather than conditioning the result
+   silently on successful ratio estimation.
 
 ## Technical record and reproduction
 
@@ -157,6 +190,8 @@ or evaluator-version changes. They isolate two statistical lessons:
   findings, verification checks, and technical captions.
 - [`journal_study.py`](journal_study.py) contains the expanded simulations and
   plotting code.
+- [`component_ablation_study.py`](component_ablation_study.py) contains the
+  20,000-replication weak-denominator study.
 - [`journal_summary.csv`](results/journal_final/journal_summary.csv) contains
   the full-precision summaries used in every displayed figure.
 
@@ -174,6 +209,12 @@ is explicit:
 
 ```bash
 python3 -c "import journal_study as js; print(js.run_final())"
+```
+
+The component stress study is run separately:
+
+```bash
+python3 component_ablation_study.py
 ```
 
 The current reader figures were regenerated from the existing final summary;

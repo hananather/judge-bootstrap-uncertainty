@@ -813,7 +813,7 @@ def journal_figure_study_b(summary: list[dict[str, float | int | str]], output: 
 def reader_figure_target_resampling(
     summary: list[dict[str, float | int | str]], output: Path
 ) -> None:
-    """Explain the target-resampling result without requiring variance notation."""
+    """Show what changes when production sampling is added to the baseline."""
     rows = [row for row in summary if row["study"] == "A"]
     regime = "high success, N=200"
     scenarios = (
@@ -824,7 +824,7 @@ def reader_figure_target_resampling(
     y_positions = np.arange(len(scenarios))[::-1]
     methods = (
         ("textbook_validation_only", "#D55E00", "o", "Production rate held fixed"),
-        ("full_fixed_stratum_bootstrap", "#0072B2", "s", "Production and validation resampled"),
+        ("textbook_plus_target_resampling", "#0072B2", "s", "Production cases resampled"),
     )
 
     with plt.rc_context({
@@ -835,7 +835,10 @@ def reader_figure_target_resampling(
         "xtick.labelsize": 7.8,
         "ytick.labelsize": 8.0,
     }):
-        figure, axis = plt.subplots(figsize=(7.2, 4.15))
+        figure, (coverage_axis, width_axis) = plt.subplots(
+            1, 2, figsize=(8.5, 4.45), sharey=True,
+            gridspec_kw={"width_ratios": (1.15, 0.85)},
+        )
         for y, (rho, _) in zip(y_positions, scenarios):
             selected = {
                 method: next(
@@ -846,12 +849,15 @@ def reader_figure_target_resampling(
                 )
                 for method, *_ in methods
             }
-            endpoints = [
+            coverage_values = [
                 100.0 * float(selected[method]["coverage"])
                 for method, *_ in methods
             ]
-            axis.plot(endpoints, [y, y], color="#B8B8B8", linewidth=1.8, zorder=1)
-            for index, (method, color, marker, label) in enumerate(methods):
+            coverage_axis.plot(
+                [min(coverage_values), max(coverage_values)], [y, y],
+                color="#B8B8B8", linewidth=1.8, zorder=1,
+            )
+            for method, color, marker, label in methods:
                 row = selected[method]
                 value = 100.0 * float(row["coverage"])
                 error = np.array([[
@@ -859,45 +865,96 @@ def reader_figure_target_resampling(
                 ], [
                     100.0 * (float(row["coverage_wilson_high"]) - float(row["coverage"]))
                 ]])
-                axis.errorbar(
+                coverage_axis.errorbar(
                     value, y, xerr=error, color=color, marker=marker,
-                    markersize=6.0, capsize=2.4, linewidth=1.3,
+                    markersize=6.0, capsize=3.2, capthick=1.4,
+                    elinewidth=1.7, linewidth=1.3,
                     label=label if y == y_positions[0] else None, zorder=3,
                 )
-                vertical_offset = 0.16 if index == 0 else -0.18
-                axis.text(
-                    value, y + vertical_offset, f"{value:.1f} out of 100",
-                    color=color, ha="center", va="center", fontsize=7.4,
-                )
+            coverage_axis.text(
+                coverage_values[0] - 0.25, y + 0.20, f"{coverage_values[0]:.1f}",
+                color=methods[0][1], ha="right", fontsize=7.3,
+            )
+            coverage_axis.text(
+                coverage_values[1] + 0.25, y + 0.20, f"{coverage_values[1]:.1f}",
+                color=methods[1][1], ha="left", fontsize=7.3,
+            )
+            coverage_axis.text(
+                0.5 * sum(coverage_values), y - 0.23,
+                f"+{coverage_values[1] - coverage_values[0]:.1f} points",
+                color="#444444", ha="center", fontsize=7.1,
+            )
 
-        axis.axvline(95.0, color="#555555", linestyle="--", linewidth=1.1)
-        axis.text(95.0, y_positions[0] + 0.43, "95 out of 100", ha="center", fontsize=7.4, color="#444444")
-        axis.set_xlim(68, 98)
-        axis.set_ylim(-0.45, 2.45)
-        axis.set_yticks(y_positions)
-        axis.set_yticklabels([label for _, label in scenarios])
-        axis.set_xlabel("How often the interval contained the true success rate")
-        axis.grid(axis="x", alpha=0.15)
-        axis.legend(
-            frameon=False, loc="lower center", bbox_to_anchor=(0.5, 1.01),
-            ncol=2, handletextpad=0.55, columnspacing=1.4,
+            width_values = [
+                100.0 * float(selected[method]["mean_width"])
+                for method, *_ in methods
+            ]
+            width_axis.plot(
+                [min(width_values), max(width_values)], [y, y],
+                color="#B8B8B8", linewidth=1.8, zorder=1,
+            )
+            for method, color, marker, label in methods:
+                value = 100.0 * float(selected[method]["mean_width"])
+                width_axis.plot(
+                    value, y, color=color, marker=marker, markersize=6.0,
+                    label=label if y == y_positions[0] else None, zorder=3,
+                )
+            width_axis.text(
+                width_values[0] - 0.20, y + 0.20, f"{width_values[0]:.1f}",
+                color=methods[0][1], ha="right", fontsize=7.3,
+            )
+            width_axis.text(
+                width_values[1] + 0.20, y + 0.20, f"{width_values[1]:.1f}",
+                color=methods[1][1], ha="left", fontsize=7.3,
+            )
+            width_axis.text(
+                0.5 * sum(width_values), y - 0.23,
+                f"+{width_values[1] - width_values[0]:.1f} points",
+                color="#444444", ha="center", fontsize=7.1,
+            )
+
+        coverage_axis.axvline(95.0, color="#555555", linestyle="--", linewidth=1.1)
+        coverage_axis.text(
+            95.0, y_positions[0] + 0.43, "95", ha="center",
+            fontsize=7.4, color="#444444",
+        )
+        coverage_axis.set_xlim(68, 98)
+        coverage_axis.set_ylim(-0.45, 2.45)
+        coverage_axis.set_yticks(y_positions)
+        coverage_axis.set_yticklabels([label for _, label in scenarios])
+        coverage_axis.set_xlabel("Coverage of the nominal 95% interval (%)")
+        coverage_axis.set_title("Did the interval contain the truth?")
+        coverage_axis.grid(axis="x", alpha=0.15)
+
+        width_axis.set_xlim(12, 27)
+        width_axis.set_xlabel("Mean interval width (percentage points)")
+        width_axis.set_title("How much wider was the interval?")
+        width_axis.grid(axis="x", alpha=0.15)
+
+        handles, labels = coverage_axis.get_legend_handles_labels()
+        figure.legend(
+            handles, labels, frameon=False, loc="lower center",
+            bbox_to_anchor=(0.5, 0.055), ncol=2,
+            handletextpad=0.5, columnspacing=1.8,
         )
         figure.suptitle(
-            "Resample production cases when they represent an ongoing population",
+            "One missing source of uncertainty explains the undercoverage",
             y=0.975, fontsize=11.2,
         )
         figure.text(
             0.5, 0.885,
-            "A 95% interval should contain the truth in about 95 of 100 repeated studies.",
+            "The only change between the two methods is whether production cases are resampled.",
             ha="center", fontsize=8.2,
         )
         figure.text(
-            0.5, 0.035,
-            "Controlled example: true success rate 80%; 200 human-labelled validation cases. "
-            "Error bars show Monte Carlo uncertainty.",
+            0.5, 0.018,
+            "Controlled example: true success rate 80%; 200 fixed, outcome-balanced validation labels. "
+            "Coverage error bars are 95% Wilson intervals across 5,000 repeated studies.",
             ha="center", fontsize=7.0,
         )
-        figure.subplots_adjust(left=0.40, right=0.98, top=0.74, bottom=0.20)
+        figure.subplots_adjust(
+            left=0.33, right=0.98, top=0.74, bottom=0.24, wspace=0.22,
+        )
         figure.savefig(output.with_suffix(".png"), dpi=300)
         figure.savefig(output.with_suffix(".svg"))
         plt.close(figure)
@@ -945,7 +1002,8 @@ def reader_figure_calibration_drift(
             axis_bias.plot([0.0, bias], [y, y], color=color, linewidth=1.7, alpha=0.75)
             axis_bias.errorbar(
                 bias, y, xerr=bias_error, color=color, marker=marker,
-                markersize=5.8, capsize=2.1, linewidth=1.2, zorder=3,
+                markersize=5.8, capsize=3.2, capthick=1.4,
+                elinewidth=1.7, linewidth=1.2, zorder=3,
             )
             bias_label = "about 0" if abs(bias) < 0.1 else f"{bias:+.1f} points"
             axis_bias.text(
@@ -961,7 +1019,8 @@ def reader_figure_calibration_drift(
             ]])
             axis_coverage.errorbar(
                 coverage, y, xerr=coverage_error, color=color, marker=marker,
-                markersize=5.8, capsize=2.1, linewidth=1.2, zorder=3,
+                markersize=5.8, capsize=3.2, capthick=1.4,
+                elinewidth=1.7, linewidth=1.2, zorder=3,
             )
             axis_coverage.text(
                 coverage - 0.55, y + 0.17, f"{coverage:.1f} out of 100",

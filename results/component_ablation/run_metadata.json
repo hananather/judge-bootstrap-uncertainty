@@ -1,0 +1,17 @@
+{
+  "outer_replications_per_cell": 20000,
+  "bootstrap_draws_per_outer_study": 1000,
+  "cells": [
+    "N=40|J=0.20",
+    "N=40|J=0.30",
+    "N=40|J=0.40",
+    "N=40|J=0.75",
+    "N=100|J=0.20",
+    "N=100|J=0.30",
+    "N=100|J=0.40",
+    "N=100|J=0.75"
+  ],
+  "workers": 4,
+  "seed": 20260812,
+  "elapsed_seconds": 30.507115417000023
+}
