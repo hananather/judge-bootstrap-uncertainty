@@ -80,7 +80,7 @@ failure. We use those error rates to correct the automated pass rate with the
 [Rogan–Gladen correction](https://pubmed.ncbi.nlm.nih.gov/623091/).
 
 ```mermaid
-flowchart LR
+flowchart TB
     A["Production cases"] --> B["Automated Pass or Fail labels"]
     C["Cases with human and automated labels"] --> D["How often the evaluator is wrong"]
     B --> E["Corrected pass rate"]
