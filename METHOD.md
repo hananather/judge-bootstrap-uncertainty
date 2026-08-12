@@ -6,41 +6,41 @@ Suppose an automated evaluator produces $Z\in\{0,1\}$, while an
 authoritative review would produce $Y\in\{0,1\}$.  We want the current
 production success probability
 
-\[
+$$
 \theta=\Pr(Y=1),
-\]
+$$
 
 not merely the fraction of cases passed by the automated evaluator.
 
 Let
 
-\[
+$$
 a=\Pr(Z=1\mid Y=1),\qquad b=\Pr(Z=0\mid Y=0),\qquad J=a+b-1.
-\]
+$$
 
 If $q=\Pr(Z=1)$, then
 
-\[
+$$
 q=(1-b)+J\theta,\qquad
 \theta=\frac{q+b-1}{J}.
-\]
+$$
 
 The simulation uses the plug-in Rogan--Gladen estimator
 
-\[
+$$
 \widehat\theta=\frac{\widehat q+\widehat b-1}{\widehat a+\widehat b-1}.
-\]
+$$
 
 ## Study A: how much variance is omitted?
 
 Study A varies the share of first-order variance contributed by the random
 production sample. Define
 
-\[
+$$
 \rho=
 \frac{q(1-q)/m}
 {\theta^2a(1-a)/n_1+(1-\theta)^2b(1-b)/n_0}.
-\]
+$$
 
 The script solves for the integer production-sample size $m$ at
 $\rho\in\{0.05,0.10,0.20,0.40,0.75,1,1.5,2\}$. The main design crosses
@@ -50,11 +50,11 @@ $\theta=0.8$, $a=0.95$, $b=0.8$, and $N=400$. This produces 56 cells.
 
 Within an outer replication,
 
-\[
+$$
 k\sim\operatorname{Binomial}(m,q),\quad
 n_{11}\sim\operatorname{Binomial}(n_1,a),\quad
 n_{00}\sim\operatorname{Binomial}(n_0,b).
-\]
+$$
 
 This treats $\theta$ as a fixed production-population success probability and
 the target cases as an independent random sample.  The validation class totals
@@ -62,14 +62,14 @@ are fixed.  It is therefore not a finite-population inference exercise.
 
 The complete delta variance is
 
-\[
+$$
 \operatorname{Var}(\widehat\theta)\approx
 \frac{1}{J^2}\left[
 \frac{q(1-q)}{m}+
 \theta^2\frac{a(1-a)}{n_1}+
 (1-\theta)^2\frac{b(1-b)}{n_0}
 \right].
-\]
+$$
 
 The first term is target-sampling uncertainty.  The textbook bootstrap holds
 $\widehat q$ fixed and cannot represent that term.  The complete bootstrap
@@ -89,9 +89,9 @@ Study B holds the validation rates at $a_v=b_v=0.875$, uses $m=2000$ and
 200 balanced validation labels, and lowers target sensitivity and specificity
 independently by
 
-\[
+$$
 d_a,d_b\in\{0,0.0125,\ldots,0.10\}.
-\]
+$$
 
 The bootstrap is complete for the *validation* sampling model, but it still
 uses $(a_v,b_v)$ to correct a target governed by

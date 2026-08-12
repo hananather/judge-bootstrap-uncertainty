@@ -33,12 +33,12 @@ The figures are organized around three decisions:
 
 For each cell, define
 
-\[
+$$
 \rho=\frac{V_{\mathrm{target}}}{V_{\mathrm{validation}}}
 =
 \frac{q(1-q)/m}
 {\theta^2a(1-a)/n_1+(1-\theta)^2b(1-b)/n_0}.
-\]
+$$
 
 The script solves for the integer target-sample size $m$ for requested
 values of $\rho$.  This has a practical advantage: the experiment directly
@@ -58,11 +58,11 @@ high-success, $N=200$ symmetric regime.
 
 The first-order benchmark for the validation-only standard error is
 
-\[
+$$
 \frac{\operatorname{SE}_{\mathrm{textbook}}}
 {\operatorname{SD}(\widehat\theta)}
 \approx(1+\rho)^{-1/2}.
-\]
+$$
 
 It is a derived variance law, not a fitted curve.  It predicts that an interval
 may become precise-looking while omitting an increasing share of uncertainty.
@@ -76,11 +76,11 @@ sensitivity-only, specificity-only, and common-mode drift.
 
 At first order, the calibration-transport bias is
 
-\[
+$$
 \operatorname{Bias}(\widehat\theta)
 =
 \frac{-\theta d_a+(1-\theta)d_b}{a_v+b_v-1}.
-\]
+$$
 
 For a high-success target, sensitivity loss produces larger negative bias than
 an equally sized specificity loss produces positive bias.  A complete bootstrap

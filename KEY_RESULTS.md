@@ -32,7 +32,7 @@ resampling alone brought coverage close to its intended 95% level.
 
 ## Result 2: weak denominators must be reported
 
-| Validation labels | True \(J\) | Weak draws discarded | Studies returning no interval | Coverage among reports | Report-and-cover probability |
+| Validation labels | True $J$ | Weak draws discarded | Studies returning no interval | Coverage among reports | Report-and-cover probability |
 |---:|---:|---:|---:|---:|---:|
 | 40 | 0.20 | 12.0% | 13.4% | 93.7% | 81.1% |
 | 100 | 0.20 | 6.3% | 2.9% | 94.8% | 92.1% |

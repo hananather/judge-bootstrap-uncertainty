@@ -47,18 +47,18 @@ also labels Pass. It measures how well the evaluator recognizes true passes.
 also labels Fail. It measures how well the evaluator recognizes true failures.
 
 **Evaluator informedness.** The correction denominator is
-\(J=\text{sensitivity}+\text{specificity}-1\). A value near zero means that the
+$J=\text{sensitivity}+\text{specificity}-1$. A value near zero means that the
 evaluator is close to chance and the correction becomes unstable.
 
-**Corrected success rate.** Let \(\widehat q\) be the judge pass rate,
-\(\widehat a\) sensitivity, and \(\widehat b\) specificity. The correction is
+**Corrected success rate.** Let $\widehat q$ be the judge pass rate,
+$\widehat a$ sensitivity, and $\widehat b$ specificity. The correction is
 
-\[
+$$
 \widehat\theta
 =
 \frac{\widehat q+\widehat b-1}
      {\widehat a+\widehat b-1}.
-\]
+$$
 
 For example, if sensitivity and specificity are both 87.5% and the evaluator
 passes 72.5% of production cases, the corrected human-defined success rate is
@@ -108,7 +108,7 @@ visible.
 ![Weak evaluators expose discarded draws and nonreporting](results/component_ablation/discarding_and_boundary_rules.png)
 
 Two different events matter. With 40 validation labels and evaluator
-informedness \(J=0.20\), 12.0% of *inner bootstrap draws* were discarded among
+informedness $J=0.20$, 12.0% of *inner bootstrap draws* were discarded among
 studies where an interval was attempted. Separately, 13.4% of *repeated outer
 studies* had a nonpositive observed denominator and returned no ratio interval.
 The interval covered 93.7% of the time conditional on reporting, but the
