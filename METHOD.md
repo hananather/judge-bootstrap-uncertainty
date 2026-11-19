@@ -85,14 +85,14 @@ standard error that is too small by the factor $(1+\rho)^{-1/2}$. For a 95%
 interval, the predicted coverage is
 
 $$
-2\,\Phi\!\left(\frac{1.96}{\sqrt{1+\rho}}\right) - 1 , \qquad (5)
+2 \Phi\left(\frac{1.96}{\sqrt{1+\rho}}\right) - 1 , \qquad (5)
 $$
 
 where $\Phi$ is the standard normal distribution function. The prediction is
 94.4% at $\rho = 0.05$, 83.4% at $\rho = 1$ and 74.2% at $\rho = 2$. It falls
 below 90% at $\rho = 0.42$.
 
-**The closed-form interval** is $\widehat\theta \pm 1.96\,\widehat{\mathrm{SE}}$.
+**The closed-form interval** is $\widehat\theta \pm 1.96 \times \widehat{\mathrm{SE}}$.
 The standard error uses all three terms of equation (3), with each quantity
 replaced by its estimate. The method limits the endpoints to $[0, 1]$.
 
@@ -244,7 +244,7 @@ runs and uses the two-sample bootstrap.
 **Bias.** In large samples the corrected pass rate tends to
 
 $$
-\theta + \frac{-\theta\, d_a + (1-\theta)\, d_b}{a_v + b_v - 1}. \qquad (7)
+\theta + \frac{-\theta d_a + (1-\theta) d_b}{a_v + b_v - 1}. \qquad (7)
 $$
 
 At $\theta = 0.8$ and $J = 0.75$, each point of lost sensitivity adds −1.07
