@@ -12,6 +12,8 @@ The script changes one implementation choice at a time:
 This is a focused simulation script, not a package.  It writes aggregate
 operating characteristics only.  The report-scale run uses 20,000 outer Monte
 Carlo studies per cell; the inner bootstrap has 1,000 draws.
+
+``make_figures.py`` draws the figure from the saved CSV file.
 """
 
 from __future__ import annotations
@@ -26,7 +28,6 @@ import os
 import time
 import warnings
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -44,15 +45,6 @@ METHODS = (
     "plus_boundary_rule",
     "plus_endpoint_quantiles",
 )
-
-METHOD_LABELS = {
-    "textbook": "Textbook baseline",
-    "plus_target": "+ production resampling",
-    "plus_fixed_strata": "+ match fixed validation strata",
-    "plus_boundary_rule": "+ prespecified weak-draw completion",
-    "plus_endpoint_quantiles": "+ constrain endpoints, not every draw",
-}
-
 
 @dataclass(frozen=True)
 class Cell:
@@ -350,147 +342,6 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
         writer.writerows(rows)
 
 
-def plot_results(rows: list[dict[str, object]], output: Path) -> None:
-    with plt.rc_context({
-        "font.size": 9.0,
-        "axes.titlesize": 10.0,
-        "axes.labelsize": 9.2,
-        "legend.fontsize": 7.0,
-        "xtick.labelsize": 8.2,
-        "ytick.labelsize": 8.2,
-    }):
-        figure, axes = plt.subplots(
-            2, 2, figsize=(8.4, 6.7), sharex="col", sharey="row",
-        )
-        for column, validation_total in enumerate((40, 100)):
-            subset = [row for row in rows if row["validation_total_N"] == validation_total]
-            discard = sorted(
-                [row for row in subset if row["method"] == "textbook"],
-                key=lambda row: float(row["J"]),
-            )
-            x = 100.0 * np.asarray([float(row["J"]) for row in discard])
-            invalid = 100.0 * np.asarray([
-                float(row["pooled_missing_class_draw_rate_when_attempted"])
-                + float(row["pooled_nonpositive_J_draw_rate_when_attempted"])
-                for row in discard
-            ])
-            not_reported = 100.0 * np.asarray([
-                1.0 - float(row["report_rate"]) for row in discard
-            ])
-            axes[0, column].plot(
-                x, invalid, color="#B2182B", marker="o", linewidth=1.8,
-                label="Inner bootstrap draws discarded",
-            )
-            axes[0, column].plot(
-                x, not_reported, color="#5B4B8A", marker="D",
-                linestyle="--", linewidth=1.4,
-                label="Studies not reported because estimated J ≤ 0",
-            )
-            axes[0, column].set_title(f"{validation_total} validation labels")
-            axes[0, column].set_ylabel("Frequency (%)")
-            axes[0, column].set_ylim(-0.5, 22.0)
-            axes[0, column].grid(alpha=0.16)
-            axes[0, column].annotate(
-                f"{invalid[0]:.1f}% of draws\ndiscarded",
-                (x[0], invalid[0]),
-                xytext=((38, -25) if column == 0 else (62, 32)),
-                textcoords="offset points",
-                fontsize=7.0, color="#8C1622", va="top",
-                arrowprops={"arrowstyle": "-", "color": "#8C1622", "lw": 0.7},
-            )
-            axes[0, column].annotate(
-                f"{not_reported[0]:.1f}% of studies\nsuppressed by the rule",
-                (x[0], not_reported[0]),
-                xytext=((38, 13) if column == 0 else (62, 70)),
-                textcoords="offset points",
-                fontsize=7.0, color="#5B4B8A", va="bottom",
-                arrowprops={"arrowstyle": "-", "color": "#5B4B8A", "lw": 0.7},
-            )
-
-            textbook = sorted(
-                [row for row in subset if row["method"] == "textbook"],
-                key=lambda row: float(row["J"]),
-            )
-            boundary = sorted(
-                [row for row in subset if row["method"] == "plus_boundary_rule"],
-                key=lambda row: float(row["J"]),
-            )
-            coverage_series = (
-                (
-                    textbook, "conditional_coverage", "coverage_wilson_low",
-                    "coverage_wilson_high", "#D55E00", "o",
-                    "Chapter-style interval: coverage among reports",
-                ),
-                (
-                    boundary, "conditional_coverage", "coverage_wilson_low",
-                    "coverage_wilson_high", "#009E73", "^",
-                    "Completed weak draws: coverage among reports",
-                ),
-                (
-                    textbook, "operational_coverage", "operational_coverage_wilson_low",
-                    "operational_coverage_wilson_high", "#5B4B8A", "D",
-                    "J > 0 rule: probability of reporting and covering",
-                ),
-            )
-            for points, value_key, low_key, high_key, color, marker, label in coverage_series:
-                coverage = 100.0 * np.asarray([float(row[value_key]) for row in points])
-                yerr = np.vstack((
-                    [100.0 * (float(row[value_key]) - float(row[low_key])) for row in points],
-                    [100.0 * (float(row[high_key]) - float(row[value_key])) for row in points],
-                ))
-                axes[1, column].errorbar(
-                    x, coverage, yerr=yerr, color=color, marker=marker,
-                    linewidth=1.45, elinewidth=1.7, capsize=3.2,
-                    capthick=1.4, markersize=4.8, label=label,
-                )
-            axes[1, column].axhline(95.0, color="#555555", linestyle="--", linewidth=1.0)
-            axes[1, column].set_xlabel("Pass/Fail separation, J (%)")
-            axes[1, column].set_ylabel("Probability (%)")
-            axes[1, column].set_ylim(75.0, 100.5)
-            axes[1, column].grid(alpha=0.16)
-
-            conditional = 100.0 * float(textbook[0]["conditional_coverage"])
-            operational = 100.0 * float(textbook[0]["operational_coverage"])
-            axes[1, column].annotate(
-                f"{conditional:.1f}% among reports",
-                (x[0], conditional), xytext=(12, 12), textcoords="offset points",
-                fontsize=7.0, color="#B44D00", va="bottom",
-            )
-            axes[1, column].annotate(
-                f"{operational:.1f}% report and cover",
-                (x[0], operational), xytext=(12, -18), textcoords="offset points",
-                fontsize=7.0, color="#4B3D75", va="top",
-            )
-
-        handles, labels = axes[1, 1].get_legend_handles_labels()
-        figure.legend(
-            handles, labels, loc="lower center", ncol=3, frameon=False,
-            bbox_to_anchor=(0.5, 0.035), fontsize=6.7,
-        )
-        axes[0, 0].legend(frameon=False, loc="upper right", fontsize=6.5)
-        figure.suptitle(
-            "When the evaluator is weak, reporting rules matter",
-            fontsize=12.0, y=0.98,
-        )
-        figure.text(
-            0.5, 0.925,
-            "True success rate 80%; production sample 2,000; 20,000 repeated studies per cell.",
-            ha="center", fontsize=8.2,
-        )
-        figure.text(
-            0.5, 0.075,
-            "Vertical bars show 95% uncertainty for each simulated probability. All lower-panel series report only when estimated J > 0; completing weak draws is a diagnostic.",
-            ha="center", fontsize=7.2,
-        )
-        figure.subplots_adjust(
-            left=0.10, right=0.98, top=0.88, bottom=0.22,
-            hspace=0.30, wspace=0.16,
-        )
-        figure.savefig(output.with_suffix(".png"), dpi=320)
-        figure.savefig(output.with_suffix(".svg"))
-        plt.close(figure)
-
-
 def run_final() -> Path:
     output = ROOT / "results" / "component_ablation"
     output.mkdir(parents=True, exist_ok=True)
@@ -504,7 +355,6 @@ def run_final() -> Path:
             results.append(future.result())
     rows = [row for result in sorted(results, key=lambda item: item["key"]) for row in result["rows"]]
     write_csv(output / "component_summary.csv", rows)
-    plot_results(rows, output / "discarding_and_boundary_rules")
     metadata = {
         "outer_replications_per_cell": OUTER_REPLICATIONS,
         "bootstrap_draws_per_outer_study": BOOTSTRAP_DRAWS,
