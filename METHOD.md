@@ -40,14 +40,14 @@ The judge passes a true pass with probability $a$ and a true fail with
 probability $1-b$. So the judge pass rate is
 
 $$
-q = \theta a + (1-\theta)(1-b) = (1-b) + J\theta . \tag{1}
+q = \theta a + (1-\theta)(1-b) = (1-b) + J\theta . \qquad (1)
 $$
 
 Solve equation (1) for $\theta$ and replace each quantity with its estimate.
 The result is the Rogan-Gladen estimator, the corrected pass rate:
 
 $$
-\widehat\theta = \frac{\widehat q + \widehat b - 1}{\widehat a + \widehat b - 1}. \tag{2}
+\widehat\theta = \frac{\widehat q + \widehat b - 1}{\widehat a + \widehat b - 1}. \qquad (2)
 $$
 
 Each run draws three independent counts:
@@ -71,13 +71,13 @@ $$
 \mathrm{Var}(\widehat\theta) \approx \frac{1}{J^2}\left[
 \underbrace{\frac{q(1-q)}{m}}_{\text{production sample}} +
 \underbrace{\theta^2\frac{a(1-a)}{n_1} + (1-\theta)^2\frac{b(1-b)}{n_0}}_{\text{validation sample}}
-\right]. \tag{3}
+\right]. \qquad (3)
 $$
 
 **The variance ratio** is the first term divided by the sum of the other two:
 
 $$
-\rho = \frac{q(1-q)/m}{\theta^2 a(1-a)/n_1 + (1-\theta)^2 b(1-b)/n_0}. \tag{4}
+\rho = \frac{q(1-q)/m}{\theta^2 a(1-a)/n_1 + (1-\theta)^2 b(1-b)/n_0}. \qquad (4)
 $$
 
 **Predicted coverage.** A bootstrap that holds $\widehat q$ fixed reports a
@@ -85,7 +85,7 @@ standard error that is too small by the factor $(1+\rho)^{-1/2}$. For a 95%
 interval, the predicted coverage is
 
 $$
-2\,\Phi\!\left(\frac{1.96}{\sqrt{1+\rho}}\right) - 1 , \tag{5}
+2\,\Phi\!\left(\frac{1.96}{\sqrt{1+\rho}}\right) - 1 , \qquad (5)
 $$
 
 where $\Phi$ is the standard normal distribution function. The prediction is
@@ -101,7 +101,7 @@ two parts:
 
 $$
 q(1-q) = \underbrace{\theta a(1-a) + (1-\theta) b(1-b)}_{\text{judge errors on the cases}}
-+ \underbrace{J^2\theta(1-\theta)}_{\text{which cases were drawn}} . \tag{6}
++ \underbrace{J^2\theta(1-\theta)}_{\text{which cases were drawn}} . \qquad (6)
 $$
 
 If the target is the pass rate of the scored cases themselves, the second part
@@ -244,7 +244,7 @@ runs and uses the two-sample bootstrap.
 **Bias.** In large samples the corrected pass rate tends to
 
 $$
-\theta + \frac{-\theta\, d_a + (1-\theta)\, d_b}{a_v + b_v - 1}. \tag{7}
+\theta + \frac{-\theta\, d_a + (1-\theta)\, d_b}{a_v + b_v - 1}. \qquad (7)
 $$
 
 At $\theta = 0.8$ and $J = 0.75$, each point of lost sensitivity adds −1.07
@@ -296,7 +296,7 @@ classes makes the event impossible.
 the first-order variance is smallest when
 
 $$
-\frac{n_1}{n_0} = \frac{\theta\sqrt{a(1-a)}}{(1-\theta)\sqrt{b(1-b)}} . \tag{8}
+\frac{n_1}{n_0} = \frac{\theta\sqrt{a(1-a)}}{(1-\theta)\sqrt{b(1-b)}} . \qquad (8)
 $$
 
 With $a = b$, the best share of human-Pass labels equals $\theta$: 20%, 50% or
