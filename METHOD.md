@@ -53,9 +53,9 @@ $$
 Each run draws three independent counts:
 
 $$
-k \sim \operatorname{Binomial}(m, q),\qquad
-n_{11} \sim \operatorname{Binomial}(n_1, a),\qquad
-n_{00} \sim \operatorname{Binomial}(n_0, b),
+k \sim \mathrm{Binomial}(m, q),\qquad
+n_{11} \sim \mathrm{Binomial}(n_1, a),\qquad
+n_{00} \sim \mathrm{Binomial}(n_0, b),
 $$
 
 with $\widehat q = k/m$, $\widehat a = n_{11}/n_1$ and
@@ -68,7 +68,7 @@ production sample comes from.
 A first-order (delta-method) expansion gives three terms:
 
 $$
-\operatorname{Var}(\widehat\theta) \approx \frac{1}{J^2}\left[
+\mathrm{Var}(\widehat\theta) \approx \frac{1}{J^2}\left[
 \underbrace{\frac{q(1-q)}{m}}_{\text{production sample}} +
 \underbrace{\theta^2\frac{a(1-a)}{n_1} + (1-\theta)^2\frac{b(1-b)}{n_0}}_{\text{validation sample}}
 \right]. \tag{3}
